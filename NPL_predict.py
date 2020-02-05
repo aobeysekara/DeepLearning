@@ -12,16 +12,28 @@ final_model = pickle.load(open('estimator.pkl', 'rb'))
 vectorizer= pickle.load(open('vectorizer.pkl', 'rb'))
 
 #=============== PREDICT  1  ==================================
-dataset_new = pd.read_csv('reviews.csv')
-dataset_new = dataset_new.drop(columns = "Id")
+dataset_new = pd.read_csv('reviews_by_course.csv')
+
+# dataset_new = dataset_new.drop(columns = "Id")
+
+dataset_new = dataset_new[dataset_new['CourseId'].str.contains('machine-learning', na = False)]
+dataset_new = dataset_new.drop(columns = "CourseId")
+dataset_new = dataset_new.dropna() #drop all NaN or empty values of the reviews 
+
+Nscale=1 # the scaling data
 
 # #reduce dataset by taking a 1/3 of all values for each label
 # dataset_new = dataset_new.groupby('Label').apply(lambda x: x.sample(n=int(len(x.index)/100))).reset_index(drop = True)
-dataset_new = dataset_new.groupby('Label').apply(lambda x: x.sample(n=int(len(x.index)/100))).reset_index(drop = True)
+dataset_new = dataset_new.groupby('Label').apply(lambda x: x.sample(n=int(len(x.index)/Nscale))).reset_index(drop = True)
+# print(dataset_new)
 
-print(dataset_new)
+# dataset_new = dataset_new[dataset_new['CourseId'].str.contains('html')]
+
 dataset_labels=dataset_new.drop(columns="Review")
 dataset_new = dataset_new.drop(columns = "Label")
+print(dataset_new)
+
+# print(dataset_labels)
 
 for i in dataset_new.index:
     review=re.sub('[^a-zA-Z\']', ' ', dataset_new['Review'][i]).lower() #make uppercase lowercase
@@ -41,12 +53,16 @@ predicted = final_model.predict(X_new)
 # print(np.size(dataset_labels))
 err=[]
 Y=[]
+P=[]
 for i in range(np.size(predicted)):
-    P=predicted[i]
+    P.append(predicted[i])
     R=dataset_labels['Label'][i]
-    err.append(P-R)
+    err.append(P[i]-R)
     Y.append(i)
 #print(err)
-plt.hist(err, weights=np.ones(len(err)) / len(err))
+# plt.hist(err, weights=np.ones(len(err)) / len(err))
+kwargs = dict(histtype='stepfilled', alpha=0.3, normed=True, bins=40)
+plt.hist(P, weights=np.ones(len(err)) / len(err), alpha=0.3)
+plt.hist(dataset_labels['Label'], weights=np.ones(len(err)) / len(err), alpha=0.3)
 plt.gca().yaxis.set_major_formatter(PercentFormatter(1))
 plt.show()
